@@ -172,13 +172,8 @@ end
 
 --- Do general plugin setup
 ---@param opts nvim-ts-autotag.PluginSetup?
-function Setup.setup(config)
-    if config then
-        Setup.opts = config.opts
-        opts = Setup.opts
-    else
-        opts = {}
-    end
+function Setup.setup(opts)
+    opts = opts or {}
     if Setup.did_setup() then
         return
     end
@@ -243,4 +238,8 @@ function Setup.get_opts(filetype)
     return Setup.opts
 end
 
+
+function Setup.toggle()
+    Setup.get_opts().enable = not Setup.get_opts().enable
+end
 return Setup

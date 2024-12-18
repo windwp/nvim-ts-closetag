@@ -470,6 +470,11 @@ M.attach = function(bufnr)
 
     if TagConfigs:get(vim.bo.filetype) ~= nil then
         setup_ts_tag()
+            -- this uses a new instance of opts from a new call to Setup
+            -- vim.notify('function#if#if Setup.opts.enable: ' .. vim.inspect(Setup.opts)) -- __AUTO_GENERATED_PRINT_VAR_END__
+        if not Setup.get_opts().enable then
+            return
+        end
         local group = vim.api.nvim_create_augroup("nvim-ts-autotag-" .. bufnr, { clear = true })
         if Setup.get_opts(vim.bo.filetype).enable_close then
             vim.keymap.set("i", ">", function()
@@ -576,11 +581,13 @@ function M.buffers()
 end
  
 M.toggle = function() 
-    Setup.opts.enable = not Setup.opts.enable
-    if Setup.opts.enable then
+    Setup.toggle()
+    if Setup.get_opts().enable then
         M.enable()
+    vim.notify('autotag toggled on')
     else
         M.disable()
+    vim.notify('autotag toggled off')
     end
 end
 
