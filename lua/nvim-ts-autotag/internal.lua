@@ -26,6 +26,9 @@ local buffer_tag = {}
 local setup_ts_tag = function()
     local bufnr = vim.api.nvim_get_current_buf()
     local tag_pats = TagConfigs:get_patterns(vim.bo.filetype)
+    tag_pats["enable_close"] = Setup.get_opts(vim.bo.filetype).enable_close
+    tag_pats["enable_close_on_slash"] = Setup.get_opts(vim.bo.filetype).enable_close_on_slash
+    tag_pats["enable_rename"] = Setup.get_opts(vim.bo.filetype).enable_rename
     if tag_pats then
         buffer_tag[bufnr] = tag_pats
     else
@@ -467,6 +470,11 @@ M.attach = function(bufnr)
 
     if TagConfigs:get(vim.bo.filetype) ~= nil then
         setup_ts_tag()
+            -- this uses a new instance of opts from a new call to Setup
+            -- vim.notify('function#if#if Setup.opts.enable: ' .. vim.inspect(Setup.opts)) -- __AUTO_GENERATED_PRINT_VAR_END__
+        if not Setup.get_opts().enable then
+            return
+        end
         local group = vim.api.nvim_create_augroup("nvim-ts-autotag-" .. bufnr, { clear = true })
         if Setup.get_opts(vim.bo.filetype).enable_close then
             vim.keymap.set("i", ">", function()
@@ -510,6 +518,79 @@ M.detach = function(bufnr)
     bufnr = tonumber(bufnr) or vim.api.nvim_get_current_buf()
     buffer_tag[bufnr] = nil
 end
+
+M.enable = function()
+    for bufnr, tag in pairs(buffer_tag) do
+        if tag ~= nil then
+   local group = vim.api.nvim_create_augroup("nvim-ts-autotag-" .. bufnr, { clear = true })
+        if tag.enable_close then
+            vim.keymap.set("i", ">", function()
+                local row, col = unpack(vim.api.nvim_win_get_cursor(0))
+                vim.api.nvim_buf_set_text(bufnr, row - 1, col, row - 1, col, { ">" })
+                M.close_tag()
+                vim.api.nvim_win_set_cursor(0, { row, col + 1 })
+            end, {
+                noremap = true,
+                silent = true,
+                buffer = bufnr,
+            })
+        end
+        if tag.enable_close_on_slash then
+            vim.keymap.set("i", "/", function()
+                local row, col = unpack(vim.api.nvim_win_get_cursor(0))
+                vim.api.nvim_buf_set_text(bufnr, row - 1, col, row - 1, col, { "/" })
+                if is_before_arrow() then
+                    log.debug("is_before_arrow")
+                    M.close_slash_tag()
+                end
+                local new_row, new_col = unpack(vim.api.nvim_win_get_cursor(0))
+                vim.api.nvim_win_set_cursor(0, { new_row, new_col + 1 })
+            end, {
+                noremap = true,
+                silent = true,
+                buffer = bufnr,
+            })
+        end
+        if tag.enable_rename then
+            vim.api.nvim_create_autocmd("InsertLeave", {
+                group = group,
+                buffer = bufnr,
+                callback = M.rename_tag,
+            })
+        end
+    end
+    end
+end
+
+M.disable = function()
+    for bufnr, _ in pairs(buffer_tag) do
+       vim.keymap.set("i", ">", ">", {
+            noremap = true,
+            silent = true,
+            buffer = bufnr,
+        })
+       vim.keymap.set("i", "/", "/", {
+            noremap = true,
+            silent = true,
+            buffer = bufnr,
+        })
+        vim.cmd("autocmd! nvim-ts-autotag-" .. bufnr)
+    end
+end
+function M.buffers()
+end
+ 
+M.toggle = function() 
+    Setup.toggle()
+    if Setup.get_opts().enable then
+        M.enable()
+    vim.notify('autotag toggled on')
+    else
+        M.disable()
+    vim.notify('autotag toggled off')
+    end
+end
+
 
 -- _G.AUTO = M
 return M
