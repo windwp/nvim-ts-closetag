@@ -130,6 +130,7 @@ local Opts = {
     enable_rename = true,
     enable_close = true,
     enable_close_on_slash = false,
+    enable = true,
 }
 
 ---@class nvim-ts-autotag.PluginSetup
@@ -171,8 +172,13 @@ end
 
 --- Do general plugin setup
 ---@param opts nvim-ts-autotag.PluginSetup?
-function Setup.setup(opts)
-    opts = opts or {}
+function Setup.setup(config)
+    if config then
+        Setup.opts = config.opts
+        opts = Setup.opts
+    else
+        opts = {}
+    end
     if Setup.did_setup() then
         return
     end
@@ -197,6 +203,7 @@ function Setup.setup(opts)
             TagConfigs:add_alias(new_ft, existing_ft)
         end
         local augroup = vim.api.nvim_create_augroup("nvim_ts_xmltag", { clear = true })
+        -- initializes autotag
         vim.api.nvim_create_autocmd("InsertEnter", {
             group = augroup,
             once = true,
@@ -204,6 +211,7 @@ function Setup.setup(opts)
                 require("nvim-ts-autotag.internal").attach(args.buf)
             end,
         })
+        -- adds autotag to every new file opened
         vim.api.nvim_create_autocmd("Filetype", {
             group = augroup,
             callback = function(args)
